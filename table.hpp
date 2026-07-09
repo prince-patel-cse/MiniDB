@@ -1,5 +1,6 @@
 #ifndef TABLE_HPP
 #define TABLE_HPP
+#include "version.hpp"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -13,7 +14,7 @@ public:
     std::vector<std::string> cols;
     std::unordered_set<std::string> s;
     std::vector<std::unordered_map<std::string, std::string>> rows;
-    std::vector<std::vector<std::unordered_map<std::string, std::string>>> versions;
+    std::vector<Version> versions;
     std::unordered_map<int, int> ids;
     Table(const std::string &name, const std::vector<std::string> &cols);
     bool validate(const std::unordered_map<std::string, std::string> &row);
@@ -30,6 +31,7 @@ public:
     void rollback(int n);
     void serialize(std::ostream &out) const;
     void deserialize(std::istream &in);
+    void execute(Table &t, Version &v);
 };
 
 #endif

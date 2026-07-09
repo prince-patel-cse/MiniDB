@@ -31,7 +31,10 @@ void Table::insertRow(const std::unordered_map<std::string, std::string> &row)
         std::cout << "Row added successfully" << std::endl
                   << "ID : " << count + 1 << std::endl;
         ids[++count] = rows.size() - 1;
-        versions.push_back(rows);
+        Version v;
+        v.id = count;
+        v.type = OperationType::insert;
+        versions.push_back(v);
     }
 }
 void Table::printRow(const std::unordered_map<std::string, std::string> &row) const
@@ -73,8 +76,13 @@ void Table::updateRow(int id, std::string &key, std::string &val)
         std::cout << "key doesn't exists" << std::endl;
         return;
     }
+    Version v;
+    v.id = id;
+    v.key = key;
+    v.val = rows[ids[id]][key];
+    v.type = OperationType::update;
     rows[ids[id]][key] = val;
-    versions.push_back(rows);
+    versions.push_back(v);
 }
 void Table::deleteRow(int id)
 {
@@ -82,12 +90,16 @@ void Table::deleteRow(int id)
         std::cout << "Row doesn't exists" << std::endl;
     else
     {
+        Version v;
+        v.id = id;
+        v.row = rows[ids[id]];
+        v.type = OperationType::del;
         rows.erase(rows.begin() + ids[id]);
         for (auto &p : ids)
             if (p.second > ids[id])
                 p.second--;
         ids.erase(id);
-        versions.push_back(rows);
+        versions.push_back(v);
     }
 }
 void Table::findRowById(int id)
@@ -97,19 +109,50 @@ void Table::findRowById(int id)
     else
         printRow(rows[ids[id]]);
 }
+void Table::execute(Table &t, Version &v)
+{
+    if (v.type == OperationType::insert)
+    {
+        int idx = t.ids[v.id];
+        t.rows.erase(t.rows.begin() + idx);
+        t.ids.erase(v.id);
+    }
+    else if (v.type == OperationType::del)
+    {
+        t.rows.push_back(v.row);
+        t.ids[v.id] = t.rows.size() - 1;
+    }
+    else
+    {
+        int idx = t.ids[v.id];
+        t.rows[idx][v.key] = v.val;
+    }
+}
 void Table::getVersion(int n)
 {
-    if (n < 0 || n > versions.size())
+    if (n < 0 || n >= versions.size())
+    {
         std::cout << "Invalid version\n";
-    else
-        print(versions[n]);
+        return;
+    }
+    Table t = *this;
+    for (int i = versions.size() - 1; i > n; i--)
+        execute(t, versions[i]);
+    t.print();
 }
 void Table::rollback(int n)
 {
-    if (n < 0 || n > versions.size())
+    if (n < 0 || n >= versions.size())
+    {
         std::cout << "Invalid version\n";
-    else
-        rows = versions[n];
+        return;
+    }
+    Table t = *this;
+    for (int i = versions.size() - 1; i > n; i--)
+        execute(t, versions[i]);
+    *this = t;
+    while (versions.size() > n + 1)
+        versions.pop_back();
 }
 void Table::serialize(std::ostream &out) const
 {
@@ -134,19 +177,21 @@ void Table::serialize(std::ostream &out) const
 
     out << versions.size() << '\n';
 
-    for (const auto &version : versions)
+    for (const auto &v : versions)
     {
-        out << version.size() << '\n';
+        out << static_cast<int>(v.type) << '\n';
 
-        for (const auto &row : version)
+        out << v.id << '\n';
+
+        out << v.key << '\n';
+        out << v.val << '\n';
+
+        out << v.row.size() << '\n';
+
+        for (const auto &cell : v.row)
         {
-            out << row.size() << '\n';
-
-            for (const auto &cell : row)
-            {
-                out << cell.first << '\n';
-                out << cell.second << '\n';
-            }
+            out << cell.first << '\n';
+            out << cell.second << '\n';
         }
     }
 }
@@ -212,35 +257,38 @@ void Table::deserialize(std::istream &in)
 
     size_t versionCount;
     in >> versionCount;
+    in.ignore();
 
     for (size_t i = 0; i < versionCount; i++)
     {
-        size_t versionRowCount;
-        in >> versionRowCount;
+        Version v;
 
-        std::vector<std::unordered_map<std::string, std::string>> version;
+        int type;
+        in >> type;
+        in.ignore();
 
-        for (size_t j = 0; j < versionRowCount; j++)
+        v.type = static_cast<OperationType>(type);
+
+        in >> v.id;
+        in.ignore();
+
+        getline(in, v.key);
+        getline(in, v.val);
+
+        size_t cellCount;
+        in >> cellCount;
+        in.ignore();
+
+        for (size_t j = 0; j < cellCount; j++)
         {
-            size_t cellCount;
-            in >> cellCount;
-            in.ignore();
+            std::string key, value;
 
-            std::unordered_map<std::string, std::string> row;
+            getline(in, key);
+            getline(in, value);
 
-            for (size_t k = 0; k < cellCount; k++)
-            {
-                std::string key, value;
-
-                getline(in, key);
-                getline(in, value);
-
-                row[key] = value;
-            }
-
-            version.push_back(row);
+            v.row[key] = value;
         }
 
-        versions.push_back(version);
+        versions.push_back(v);
     }
 }

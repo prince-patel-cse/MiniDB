@@ -1,7 +1,8 @@
 #include "table.hpp"
 #include <iostream>
-Table::Table(const std::string &name, const std::vector<std::string> &cols) : cols(cols)
+Table::Table(const std::string &name, const std::vector<std::string> &cols)
 {
+    this->cols = cols;
     this->name = name;
     for (auto &col : cols)
         s.insert(col);
@@ -10,13 +11,11 @@ Table::Table(const std::string &name, const std::vector<std::string> &cols) : co
 bool Table::validate(const std::unordered_map<std::string, std::string> &row)
 {
     for (auto &c : row)
-    {
         if (!s.count(c.first))
         {
             std::cout << "Invalid row" << std::endl;
             return false;
         }
-    }
     if (s.size() != row.size())
     {
         std::cout << "incorrect number of cols" << std::endl;
@@ -35,45 +34,21 @@ void Table::insertRow(const std::unordered_map<std::string, std::string> &row)
         versions.push_back(rows);
     }
 }
-void Table::rollback(int n)
-{
-    if (n < 0 || n > versions.size())
-    {
-        std::cout << "Invalid version\n";
-        return;
-    }
-    rows = versions[n];
-}
 void Table::printRow(const std::unordered_map<std::string, std::string> &row) const
 {
     for (auto &col : cols)
-    {
-        std::cout << col << " " << row.at(col) << std::endl;
-    }
+        std::cout << col << " : " << row.at(col) << " , ";
     std::cout << std::endl;
 }
 void Table::print(std::vector<std::unordered_map<std::string, std::string>> &rows) const
 {
-    std::cout << "Table" << std::endl;
     for (auto &row : rows)
-    {
         printRow(row);
-    }
 }
 void Table::print() const
 {
-    std::cout << "Table" << std::endl;
     for (auto &row : rows)
-    {
         printRow(row);
-    }
-}
-void Table::findRowById(int id)
-{
-    if (!ids.count(id))
-        std::cout << "Row doesn't exists" << std::endl;
-    else
-        printRow(rows[ids[id]]);
 }
 void Table::updateRow(int id, std::string &key, std::string &val)
 {
@@ -97,7 +72,6 @@ void Table::deleteRow(int id)
     else
     {
         rows.erase(rows.begin() + ids[id]);
-
         for (auto &p : ids)
             if (p.second > ids[id])
                 p.second--;
@@ -105,37 +79,47 @@ void Table::deleteRow(int id)
         versions.push_back(rows);
     }
 }
+void Table::findRowById(int id)
+{
+    if (!ids.count(id))
+        std::cout << "Row doesn't exists" << std::endl;
+    else
+        printRow(rows[ids[id]]);
+}
+void Table::getVersion(int n)
+{
+    if (n < 0 || n > versions.size())
+        std::cout << "Invalid version\n";
+    else
+        print(versions[n]);
+}
+void Table::rollback(int n)
+{
+    if (n < 0 || n > versions.size())
+        std::cout << "Invalid version\n";
+    else
+        rows = versions[n];
+}
 void Table::serialize(std::ostream &out) const
 {
-    out << count << '\n';
-
-    out << name << '\n';
-
-    // columns
+    out << count << '\n' << name << '\n';
     out << cols.size() << '\n';
     for (const auto &col : cols)
         out << col << '\n';
-
-    // ids
+        
     out << ids.size() << '\n';
     for (const auto &p : ids)
         out << p.first << ' ' << p.second << '\n';
 
-    // current rows
     out << rows.size() << '\n';
-
     for (const auto &row : rows)
     {
         out << row.size() << '\n';
-
         for (const auto &cell : row)
             out << cell.first << '\n'
                 << cell.second << '\n';
     }
 
-    // -------------------------
-    // versions
-    // -------------------------
     out << versions.size() << '\n';
 
     for (const auto &version : versions)
@@ -190,7 +174,6 @@ void Table::deserialize(std::istream &in)
         ids[a] = b;
     }
 
-    // current rows
     size_t rowCount;
     in >> rowCount;
 
@@ -215,9 +198,6 @@ void Table::deserialize(std::istream &in)
         rows.push_back(row);
     }
 
-    // -------------------------
-    // versions
-    // -------------------------
     size_t versionCount;
     in >> versionCount;
 
@@ -251,13 +231,4 @@ void Table::deserialize(std::istream &in)
 
         versions.push_back(version);
     }
-}
-void Table::getVersion(int n)
-{
-    if (n < 0 || n > versions.size())
-    {
-        std::cout << "Invalid version\n";
-        return;
-    }
-    print(versions[n]);
 }

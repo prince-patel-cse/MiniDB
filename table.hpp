@@ -21,13 +21,13 @@ public:
     void print(std::vector<std::unordered_map<std::string, std::string>> &rows) const;
     void print() const;
     void printRow(const std::unordered_map<std::string, std::string> &row) const;
-    void findRowById(int idx);
     void updateRow(int id, std::string &key, std::string &val);
     void deleteRow(int id);
-    void serialize(std::ostream &out) const;
-    void deserialize(std::istream &in);
+    void findRowById(int idx);
     void getVersion(int n);
     void rollback(int n);
+    void serialize(std::ostream &out) const;
+    void deserialize(std::istream &in);
 };
 
 #endif

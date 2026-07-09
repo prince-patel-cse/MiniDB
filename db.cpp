@@ -54,7 +54,7 @@ void DB::selectAll(int tableId, int n)
         std::cout << "Invalid id" << std::endl;
         return;
     }
-    tables[ids[tableId]].print(tables[ids[tableId]].versions[n]);
+    tables[ids[tableId]].getVersion(n);
 }
 void DB::selectAll(int tableId)
 {
@@ -63,7 +63,7 @@ void DB::selectAll(int tableId)
         std::cout << "Invalid id" << std::endl;
         return;
     }
-    tables[ids[tableId]].print(tables[ids[tableId]].rows);
+    tables[ids[tableId]].print();
 }
 void DB::rollback(int tableId, int n)
 {

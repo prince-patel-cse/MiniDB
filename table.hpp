@@ -1,22 +1,23 @@
 #ifndef TABLE_HPP
 #define TABLE_HPP
 #include "version.hpp"
+#include "column.hpp"
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
-// Only declares that the function exists
+
 class Table
 {
 public:
     int count = 0;
     std::string name;
-    std::vector<std::string> cols;
-    std::unordered_set<std::string> s;
+    std::vector<Column> cols;
+    std::unordered_map<std::string, DataTypes> s;
     std::vector<std::unordered_map<std::string, std::string>> rows;
     std::vector<Version> versions;
     std::unordered_map<int, int> ids;
-    Table(const std::string &name, const std::vector<std::string> &cols);
+    Table(const std::string &name, const std::vector<Column> &cols);
     bool validate(const std::unordered_map<std::string, std::string> &row);
     void insertRow(const std::unordered_map<std::string, std::string> &row);
     void print(std::vector<std::unordered_map<std::string, std::string>> &rows) const;

@@ -10,7 +10,7 @@ public:
     std::vector<Table> tables;
     std::unordered_map<int, int> ids;
     std::unordered_set<std::string> s;
-    void createTable(std::string name, std::vector<std::string> cols);
+    void createTable(std::string name, std::vector<Column> cols);
     void dropTable(int id);
     void insertRow(int id, const std::unordered_map<std::string, std::string> row);
     void updateRow(int tableId, int rowId, std::string key, std::string val);

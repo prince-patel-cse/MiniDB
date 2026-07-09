@@ -1,6 +1,6 @@
 #include "db.hpp"
 #include <fstream>
-void DB::createTable(std::string name, std::vector<std::string> cols)
+void DB::createTable(std::string name, std::vector<Column> cols)
 {
     if (s.count(name))
     {

@@ -1,6 +1,7 @@
 #ifndef VERSION_HPP
 #define VERSION_HPP
 #include <unordered_map>
+#include <string>
 enum class OperationType
 {
     insert,

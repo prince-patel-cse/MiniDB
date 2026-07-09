@@ -1,21 +1,82 @@
 #include "table.hpp"
 #include <iostream>
-Table::Table(const std::string &name, const std::vector<std::string> &cols)
+bool isInt(const std::string &s)
+{
+    try
+    {
+        size_t pos;
+        std::stoi(s, &pos);
+        return pos == s.size();
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+bool isDouble(const std::string &s)
+{
+    try
+    {
+        size_t pos;
+        std::stod(s, &pos);
+        return pos == s.size();
+    }
+    catch (...)
+    {
+        return false;
+    }
+}
+bool isBool(const std::string &s)
+{
+    return s == "true" || s == "false";
+}
+bool validType(const std::string &str, const DataTypes &type)
+{
+    switch (type)
+    {
+    case DataTypes::INT:
+        if (!isInt(str))
+            return false;
+        break;
+
+    case DataTypes::DOUBLE:
+        if (!isDouble(str))
+            return false;
+        break;
+
+    case DataTypes::BOOL:
+        if (!isBool(str))
+            return false;
+        break;
+
+    case DataTypes::STRING:
+        break;
+    }
+    return true;
+}
+Table::Table(const std::string &name, const std::vector<Column> &cols)
 {
     this->cols = cols;
     this->name = name;
     for (auto &col : cols)
-        s.insert(col);
+        s[col.name] = col.type;
     versions.push_back({});
 };
 bool Table::validate(const std::unordered_map<std::string, std::string> &row)
 {
     for (auto &c : row)
+    {
         if (!s.count(c.first))
         {
             std::cout << "Invalid row" << std::endl;
             return false;
         }
+        if (!validType(c.second, s[c.first]))
+        {
+            std::cout << "Invlaid type\n";
+            return false;
+        }
+    }
     if (s.size() != row.size())
     {
         std::cout << "incorrect number of cols" << std::endl;
@@ -40,11 +101,17 @@ void Table::insertRow(const std::unordered_map<std::string, std::string> &row)
 void Table::printRow(const std::unordered_map<std::string, std::string> &row) const
 {
     for (auto &col : cols)
-        std::cout << col << " : " << row.at(col) << " , ";
+    {
+        std::string name = col.name;
+        std::cout << name << " : " << row.at(name) << " , ";
+    }
     std::cout << std::endl;
 }
 void Table::printRow(const std::unordered_map<std::string, std::string> &row, std::vector<std::string> &cols) const
 {
+    for (auto &col : cols)
+        if (!s.count(col))
+            return;
     for (auto &col : cols)
         std::cout << col << " : " << row.at(col) << " , ";
     std::cout << std::endl;
@@ -74,6 +141,11 @@ void Table::updateRow(int id, std::string &key, std::string &val)
     if (!s.count(key))
     {
         std::cout << "key doesn't exists" << std::endl;
+        return;
+    }
+    if (!validType(val, s[key]))
+    {
+        std::cout << "Invalid type\n";
         return;
     }
     Version v;
@@ -160,7 +232,10 @@ void Table::serialize(std::ostream &out) const
         << name << '\n';
     out << cols.size() << '\n';
     for (const auto &col : cols)
-        out << col << '\n';
+    {
+        out << col.name << '\n';
+        out << static_cast<int>(col.type) << '\n';
+    }
 
     out << ids.size() << '\n';
     for (const auto &p : ids)
@@ -214,11 +289,18 @@ void Table::deserialize(std::istream &in)
 
     for (size_t i = 0; i < columnCount; i++)
     {
-        std::string col;
-        getline(in, col);
+        Column col;
+
+        getline(in, col.name);
+
+        int type;
+        in >> type;
+        in.ignore();
+
+        col.type = static_cast<DataTypes>(type);
 
         cols.push_back(col);
-        s.insert(col);
+        s[col.name] = col.type;
     }
 
     size_t idCount;

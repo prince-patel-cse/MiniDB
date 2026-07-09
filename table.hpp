@@ -20,7 +20,9 @@ public:
     void insertRow(const std::unordered_map<std::string, std::string> &row);
     void print(std::vector<std::unordered_map<std::string, std::string>> &rows) const;
     void print() const;
+    void print(std::vector<std::string> &cols) const;
     void printRow(const std::unordered_map<std::string, std::string> &row) const;
+    void printRow(const std::unordered_map<std::string, std::string> &row, std::vector<std::string> &cols) const;
     void updateRow(int id, std::string &key, std::string &val);
     void deleteRow(int id);
     void findRowById(int idx);

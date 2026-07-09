@@ -2,10 +2,16 @@
 #include <fstream>
 void DB::createTable(std::string name, std::vector<std::string> cols)
 {
+    if (s.count(name))
+    {
+        std::cout << "Table already exists\n";
+        return;
+    }
     Table t(name, cols);
     tables.push_back(t);
     ids[++count] = tables.size() - 1;
     std::cout << "Table created successfully\nID : " << count << std::endl;
+    s.insert(name);
 }
 void DB::dropTable(int id)
 {
@@ -123,4 +129,70 @@ void DB::load(const std::string &filename)
 
         tables.push_back(table);
     }
+}
+void DB::selectAll(std::string tName)
+{
+    Table t("", {});
+    for (Table &table : tables)
+        if (table.name == tName)
+        {
+            t = table;
+            break;
+        }
+    if (t.name == "")
+        std::cout << "Table does not exists\n";
+    else
+        t.print();
+}
+void DB::selectWhere(std::string tName, std::string key, std::string val)
+{
+    Table t("", {});
+    for (Table &table : tables)
+        if (table.name == tName)
+        {
+            t = table;
+            break;
+        }
+    if (t.name == "")
+    {
+        std::cout << "Table does not exists\n";
+        return;
+    }
+    for (auto &row : t.rows)
+        if (row[key] == val)
+            t.printRow(row);
+}
+void DB::selectColumns(std::string tName, std::vector<std::string> cols)
+{
+    Table t("", {});
+    for (Table &table : tables)
+        if (table.name == tName)
+        {
+            t = table;
+            break;
+        }
+    if (t.name == "")
+    {
+        std::cout << "Table does not exists\n";
+        return;
+    }
+    t.print(cols);
+}
+void DB::selectColumnsWhere(std::string tName, std::vector<std::string> cols, std::string key, std::string val)
+{
+    Table t("", {});
+    for (Table &table : tables)
+        if (table.name == tName)
+        {
+            t = table;
+            break;
+        }
+    if (t.name == "")
+    {
+        std::cout << "Table does not exists\n";
+        return;
+    }
+    for (auto &row : t.rows)
+        if (row[key] == val)
+            t.printRow(row, cols);
 }

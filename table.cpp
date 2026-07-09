@@ -40,6 +40,12 @@ void Table::printRow(const std::unordered_map<std::string, std::string> &row) co
         std::cout << col << " : " << row.at(col) << " , ";
     std::cout << std::endl;
 }
+void Table::printRow(const std::unordered_map<std::string, std::string> &row, std::vector<std::string> &cols) const
+{
+    for (auto &col : cols)
+        std::cout << col << " : " << row.at(col) << " , ";
+    std::cout << std::endl;
+}
 void Table::print(std::vector<std::unordered_map<std::string, std::string>> &rows) const
 {
     for (auto &row : rows)
@@ -49,6 +55,11 @@ void Table::print() const
 {
     for (auto &row : rows)
         printRow(row);
+}
+void Table::print(std::vector<std::string> &cols) const
+{
+    for (auto &row : rows)
+        printRow(row, cols);
 }
 void Table::updateRow(int id, std::string &key, std::string &val)
 {
@@ -102,11 +113,12 @@ void Table::rollback(int n)
 }
 void Table::serialize(std::ostream &out) const
 {
-    out << count << '\n' << name << '\n';
+    out << count << '\n'
+        << name << '\n';
     out << cols.size() << '\n';
     for (const auto &col : cols)
         out << col << '\n';
-        
+
     out << ids.size() << '\n';
     for (const auto &p : ids)
         out << p.first << ' ' << p.second << '\n';

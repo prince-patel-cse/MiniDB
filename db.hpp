@@ -9,6 +9,7 @@ public:
     int count = 0;
     std::vector<Table> tables;
     std::unordered_map<int, int> ids;
+    std::unordered_set<std::string> s;
     void createTable(std::string name, std::vector<std::string> cols);
     void dropTable(int id);
     void insertRow(int id, const std::unordered_map<std::string, std::string> row);

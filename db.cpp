@@ -84,27 +84,38 @@ void DB::save(const std::string &filename) const
 {
     std::ofstream out(filename);
 
+    if (!out)
+    {
+        std::cout << "Failed to open file for writing.\n";
+        return;
+    }
+
     out << count << '\n';
 
     out << ids.size() << '\n';
-
     for (const auto &p : ids)
         out << p.first << ' ' << p.second << '\n';
 
     out << tables.size() << '\n';
-
     for (const auto &table : tables)
         table.serialize(out);
+
+    std::cout << "Database saved successfully.\n";
 }
 void DB::load(const std::string &filename)
 {
     std::ifstream in(filename);
 
     if (!in)
+    {
+        std::cout << "Failed to open file.\n";
         return;
+    }
 
     tables.clear();
     ids.clear();
+    s.clear();
+    count = 0;
 
     in >> count;
 
@@ -113,9 +124,9 @@ void DB::load(const std::string &filename)
 
     for (size_t i = 0; i < idCount; i++)
     {
-        int a, b;
-        in >> a >> b;
-        ids[a] = b;
+        int logicalId, index;
+        in >> logicalId >> index;
+        ids[logicalId] = index;
     }
 
     size_t tableCount;
@@ -124,11 +135,13 @@ void DB::load(const std::string &filename)
     for (size_t i = 0; i < tableCount; i++)
     {
         Table table("", {});
-
         table.deserialize(in);
 
         tables.push_back(table);
+        s.insert(table.name);
     }
+
+    std::cout << "Database loaded successfully.\n";
 }
 void DB::selectAll(std::string tName)
 {
@@ -156,6 +169,11 @@ void DB::selectWhere(std::string tName, std::string key, std::string val)
     if (t.name == "")
     {
         std::cout << "Table does not exists\n";
+        return;
+    }
+    if (!t.s.count(key))
+    {
+        std::cout << "Key doesn't exists\n";
         return;
     }
     for (auto &row : t.rows)

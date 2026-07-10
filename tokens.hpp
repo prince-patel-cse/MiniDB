@@ -13,11 +13,12 @@ enum class TokenType
     VALUES,
     UPDATE,
     SET,
-    DELETE_,
+    DELETE,
     FROM,
     WHERE,
     SELECT,
     VERSION,
+    DROP,
 
     INT,
     STRING,

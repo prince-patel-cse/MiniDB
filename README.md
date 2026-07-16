@@ -78,24 +78,3 @@ MiniDB supports 9 shell commands:
    ```sql
    HELP;
    ```
-
----
-
-## Sharing the Project
-
-To share the MiniDB project with others:
-
-### 1. Clean Up Build Files
-Delete all temporary and generated files to keep the zip file light:
-*   Delete the **`build/`** directory.
-*   Delete **`main.exe`** and any other generated executables.
-*   Delete **`database.db`** (resets the database state).
-
-### 2. Required Source Files
-Include the following files in your zip bundle:
-*   **Source Files (.cpp and .hpp)**: All source and header files (`main.cpp`, `db.cpp`, `db.hpp`, `table.cpp`, `table.hpp`, `condition.cpp`, `condition.hpp`, `lexer.cpp`, `lexer.hpp`, `executor.cpp`, `executor.hpp`, `pager.cpp`, `pager.hpp`, `index.cpp`, `index.hpp`, `tokens.hpp`, `column.hpp`, `version.hpp`, `dataTypeValidation.hpp`)
-*   **Build configurations**: `CMakeLists.txt` and `Makefile`
-*   **Documentation**: `README.md`
-
-### 3. Packaging
-Compress these selected source files into a ZIP archive (e.g., `MiniDB.zip`) and distribute it.

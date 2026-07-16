@@ -79,6 +79,63 @@ MiniDB supports 10 shell commands:
    HISTORY users;
    ```
 10. **HELP** (Displays query guide details):
-   ```sql
-   HELP;
-   ```
+    ```sql
+    HELP;
+    ```
+
+---
+
+## 🏗️ System Architecture
+
+MiniDB is structured similarly to professional database engines, dividing its workload into a query frontend, an indexing layer, and a page-based storage backend.
+
+```mermaid
+graph TD
+    CLI[main.cpp CLI] -->|Query String| Lexer[Lexer]
+    Lexer -->|Tokens| Executor[Executor / Parser]
+    Executor -->|SQL Execution| DB[DB Catalog Manager]
+    DB -->|Active Tables| Table[Table Manager]
+    Table -->|Logical IDs / Index Lookup| Index[Index Tree]
+    Table -->|Version Operations| Version[Version Logs]
+    Table & Index & Version -->|Fixed 4KB Page I/O| Pager[Binary Pager]
+    Pager -->|Physical Offset Read/Write| Disk[(database.db)]
+```
+
+### 1. Query Processing Frontend
+*   **Tokenization**: The input SQL query is processed by the **Lexer**, which converts raw text strings into discrete, categorized keywords and literals (`TokenType`).
+*   **Execution routing**: The **Executor** parses the token stream to ensure correct SQL syntax. If valid, it immediately maps the query to the corresponding table operation.
+
+### 2. Binary Storage Engine (The Pager)
+*   **Page-Based Storage**: The **Pager** communicates directly with `database.db`, reading and writing fixed-size **4KB (4096-byte) blocks** called pages. The file offset is calculated as `pageId * 4096`.
+*   **Page Types**:
+    *   `Page 0`: Reserved for the catalog metadata, including table names, schemas, logical row ID sequences, and head page IDs.
+    *   `Type 1 (Data)`: Contains active table rows serialized to binary.
+    *   `Type 2 (Index)`: Contains serialized search-index maps.
+    *   `Type 3 (Version)`: Contains table state log history for rollback.
+*   **Page Chaining**: Since a page is 4KB, tables with many rows dynamically link multiple pages using a `next_page_id` pointer in each page header, forming a linked list of pages on disk.
+
+### 3. Indexing Layer
+*   **Address Mapping**: The **Index** maps column values (e.g. employee name `"John"`) to a `RowLocation` containing its physical disk address `{pageId, offset, logicalId}`.
+*   **Tree Search**: It uses a balanced binary search tree (`std::map` / Red-Black Tree) in memory for $O(\log N)$ fast search. This allows `SELECT ... WHERE` queries to fetch records directly from the database file, bypassing slow linear table scans.
+
+### 4. History and Rollbacks
+*   Every data modification (`INSERT`, `UPDATE`, `DELETE`) is appended to a log of versions on the version pages.
+*   The `ROLLBACK` command reads these logs backwards, reversing changes step-by-step to restore the table to a previous state.
+
+---
+
+## 🧩 Component Directory
+
+*   **[`main.cpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/main.cpp)**: Entry point. Runs the interactive REPL CLI loop and manages setup/teardown.
+*   **[`lexer.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/lexer.hpp) / [`lexer.cpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/lexer.cpp)**: Scans the SQL input and segments it into query tokens.
+*   **[`executor.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/executor.hpp) / [`executor.cpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/executor.cpp)**: Validates query grammar and triggers corresponding database commands.
+*   **[`db.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/db.hpp) / [`db.cpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/db.cpp)**: Database coordinator. Manages table creation, catalog serialization/deserialization on Page 0, and table mappings.
+*   **[`table.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/table.hpp) / [`table.cpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/table.cpp)**: Manages logical rows, schema columns, indexes, and versioning. Performs table serialization/deserialization.
+*   **[`pager.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/pager.hpp) / [`pager.cpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/pager.cpp)**: Performs low-level binary read/write operations of 4KB pages to the disk file.
+*   **[`index.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/index.hpp) / [`index.cpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/index.cpp)**: Implements search-index maps and index serialization.
+*   **[`condition.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/condition.hpp) / [`condition.cpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/condition.cpp)**: Evaluates conditional logic statements (`=`, `<`, `>`) on records.
+*   **[`tokens.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/tokens.hpp)**: Defines token classifications used by the lexer.
+*   **[`column.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/column.hpp)**: Defines table datatypes (`INT`, `STRING`, `DOUBLE`, `BOOL`) and columns.
+*   **[`version.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/version.hpp)**: Defines operation structures for the transaction logs.
+*   **[`dataTypeValidation.hpp`](file:///c:/Users/Prince/OneDrive/Documents/Placement/Projects/MiniDB/dataTypeValidation.hpp)**: Provides datatype validation helpers.
+

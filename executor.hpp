@@ -24,7 +24,9 @@ class Executor
 public:
     Executor(std::vector<Token> &tk, DB &db) : tokens(tk), db(db) {};
     void execute();         // Route the query to the correct action (SELECT, INSERT, etc.).
-    void executeCreate();   // Create a brand new table box.
+    void executeCreate();   // Handle CREATE commands (CREATE TABLE or CREATE INDEX).
+    void executeCreateTable(); // Create a brand new table box.
+    void executeCreateIndex(); // Create a search index for a table column.
     void executeInsert();   // Insert a row card into a table.
     void executeUpdate();   // Change values on row cards in a table.
     void executeDrop();     // Throw away a table box completely.

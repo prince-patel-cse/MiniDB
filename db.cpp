@@ -190,9 +190,17 @@ void DB::save(const std::string &filename)
         appendBytes(catalogData, idxCount);
         for (const auto &idx : table.indexes)
         {
+            // Save index name
+            uint8_t idxNameLen = static_cast<uint8_t>(idx.name.size());
+            catalogData.push_back(idxNameLen);
+            catalogData.insert(catalogData.end(), idx.name.begin(), idx.name.end());
+
+            // Save column name
             uint8_t idxColNameLen = static_cast<uint8_t>(idx.columnName.size());
             catalogData.push_back(idxColNameLen);
             catalogData.insert(catalogData.end(), idx.columnName.begin(), idx.columnName.end());
+
+            // Save root page ID
             appendBytes(catalogData, idx.rootPageId);
         }
     }
@@ -324,6 +332,16 @@ void DB::load(const std::string &filename)
                 tables.clear(); ids.clear(); s.clear(); count = 0;
                 return;
             }
+            uint8_t idxNameLen = *ptr; ptr++;
+            if (ptr + idxNameLen + 1 > catBuf + Pager::PAGE_SIZE)
+            {
+                std::cout << "Error: Corrupted database file.\n";
+                tables.clear(); ids.clear(); s.clear(); count = 0;
+                return;
+            }
+            std::string indexName = std::string(ptr, idxNameLen);
+            ptr += idxNameLen;
+
             uint8_t idxColNameLen = *ptr; ptr++;
             if (ptr + idxColNameLen + 4 > catBuf + Pager::PAGE_SIZE)
             {
@@ -335,13 +353,27 @@ void DB::load(const std::string &filename)
             ptr += idxColNameLen;
             uint32_t rootPageId = readBytes<uint32_t>(ptr);
 
-            for (auto &tableIdx : table.indexes)
+            if (colName == "id")
             {
-                if (tableIdx.columnName == colName)
+                for (auto &tableIdx : table.indexes)
                 {
-                    tableIdx.rootPageId = rootPageId;
-                    tableIdx.deserialize(pager, rootPageId); // Deserialize index data!
-                    break;
+                    if (tableIdx.columnName == "id")
+                    {
+                        tableIdx.rootPageId = rootPageId;
+                        tableIdx.deserialize(pager, rootPageId);
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                if (table.colIndex.count(colName))
+                {
+                    size_t colIdx = table.colIndex[colName];
+                    DataTypes colType = table.cols[colIdx].type;
+                    table.indexes.emplace_back(indexName, tableName, colName, colIdx, colType);
+                    table.indexes.back().rootPageId = rootPageId;
+                    table.indexes.back().deserialize(pager, rootPageId);
                 }
             }
         }

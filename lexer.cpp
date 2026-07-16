@@ -64,6 +64,8 @@ Token Lexer::identifier()
         {"VERSION", TokenType::VERSION},
         {"ROLLBACK", TokenType::ROLLBACK},
         {"DROP", TokenType::DROP},
+        {"INDEX", TokenType::INDEX},
+        {"ON", TokenType::ON},
         {"HISTORY", TokenType::HISTORY},
         {"HELP", TokenType::HELP},
 

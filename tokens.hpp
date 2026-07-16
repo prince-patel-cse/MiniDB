@@ -20,6 +20,8 @@ enum class TokenType
     SELECT,
     VERSION,
     DROP,
+    INDEX,
+    ON,
 
     // Data type keywords
     INT,

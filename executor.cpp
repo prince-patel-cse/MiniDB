@@ -98,12 +98,25 @@ void Executor::execute()
 
 void Executor::executeCreate()
 {
-    // Expect: CREATE TABLE <name> (<type1> <col1>, ...)
-    if (tokens[idx++].type != TokenType::TABLE)
+    if (tokens[idx].type == TokenType::TABLE)
     {
-        error("Missing TABLE keyword\n");
-        return;
+        idx++; // consume TABLE
+        executeCreateTable();
     }
+    else if (tokens[idx].type == TokenType::INDEX)
+    {
+        idx++; // consume INDEX
+        executeCreateIndex();
+    }
+    else
+    {
+        error("Expected TABLE or INDEX keyword after CREATE\n");
+    }
+}
+
+void Executor::executeCreateTable()
+{
+    // Expect: CREATE TABLE <name> (<type1> <col1>, ...)
     if (tokens[idx].type != TokenType::IDENTIFIER)
     {
         error("Expected table name\n");
@@ -175,6 +188,108 @@ void Executor::executeCreate()
         return;
     }
     db.createTable(tName, cols); // Tell the database cabinet to create the table box!
+}
+
+void Executor::executeCreateIndex()
+{
+    // Expect: CREATE INDEX <index_name> ON <table_name> (<col_name>);
+    if (tokens[idx].type != TokenType::IDENTIFIER)
+    {
+        error("Expected index name\n");
+        return;
+    }
+    std::string indexName = tokens[idx++].val;
+
+    if (tokens[idx++].type != TokenType::ON)
+    {
+        error("Missing ON keyword\n");
+        return;
+    }
+
+    if (tokens[idx].type != TokenType::IDENTIFIER)
+    {
+        error("Expected table name\n");
+        return;
+    }
+    std::string tName = tokens[idx++].val;
+
+    if (tokens[idx++].type != TokenType::LPAREN)
+    {
+        error("Missing (\n");
+        return;
+    }
+
+    if (tokens[idx].type != TokenType::IDENTIFIER)
+    {
+        error("Expected column name\n");
+        return;
+    }
+    std::string colName = tokens[idx++].val;
+
+    if (tokens[idx++].type != TokenType::RPAREN)
+    {
+        error("Missing )\n");
+        return;
+    }
+    if (tokens[idx].type == TokenType::SEMICOLON)
+    {
+        idx++;
+    }
+    if (tokens[idx].type != TokenType::END_OF_FILE)
+    {
+        error("Query not ended successfully\n");
+        return;
+    }
+
+    // Now find the table
+    Table *t = nullptr;
+    for (Table &table : db.tables)
+    {
+        if (table.name == tName)
+        {
+            t = &table;
+            break;
+        }
+    }
+    if (!t)
+    {
+        std::cout << "Table does not exist\n";
+        return;
+    }
+
+    // Verify the column exists in the table schema
+    if (!t->colIndex.count(colName))
+    {
+        std::cout << "Column " << colName << " does not exist in table " << tName << "\n";
+        return;
+    }
+    size_t colIdx = t->colIndex[colName];
+    DataTypes colType = t->cols[colIdx].type;
+
+    // Check if an index for this column already exists
+    for (const auto &existingIdx : t->indexes)
+    {
+        if (existingIdx.columnName == colName)
+        {
+            std::cout << "Index on column " << colName << " already exists\n";
+            return;
+        }
+    }
+
+    // Create the new Index object
+    t->indexes.emplace_back(indexName, tName, colName, colIdx, colType);
+    Index &newIdx = t->indexes.back();
+
+    // Retroactively populate the new index with all existing rows
+    for (const auto &p : t->ids)
+    {
+        int logicalId = p.first;
+        int physicalIdx = p.second;
+        const auto &row = t->rows[physicalIdx];
+        newIdx.insert(row[colIdx], {0, 0, logicalId});
+    }
+
+    std::cout << "Index " << indexName << " created successfully on " << tName << "(" << colName << ")\n";
 }
 
 void Executor::executeInsert()
@@ -775,23 +890,25 @@ void Executor::executeHelp()
               << "1. CREATE TABLE   : CREATE TABLE <tableName> (<colType> <colName>, ...);\n"
               << "                    Types: INT, STRING, DOUBLE, BOOL\n"
               << "                    Example: CREATE TABLE users (STRING name, INT id);\n\n"
-              << "2. INSERT INTO    : INSERT INTO <tableName> VALUES (<val1>, <val2>, ...);\n"
+              << "2. CREATE INDEX   : CREATE INDEX <indexName> ON <tableName> (<colName>);\n"
+              << "                    Example: CREATE INDEX idx_name ON users (name);\n\n"
+              << "3. INSERT INTO    : INSERT INTO <tableName> VALUES (<val1>, <val2>, ...);\n"
               << "                    Example: INSERT INTO users VALUES (\"Alice\", 1);\n\n"
-              << "3. SELECT FROM    : SELECT * FROM <tableName> [WHERE <colName> <op> <val>];\n"
+              << "4. SELECT FROM    : SELECT * FROM <tableName> [WHERE <colName> <op> <val>];\n"
               << "                    SELECT <col1>, <col2> FROM <tableName> [WHERE ...];\n"
               << "                    Operators: =, <, >\n"
               << "                    Example: SELECT * FROM users WHERE id = 1;\n\n"
-              << "4. UPDATE SET     : UPDATE <tableName> SET <colName> = <val> [WHERE ...];\n"
+              << "5. UPDATE SET     : UPDATE <tableName> SET <colName> = <val> [WHERE ...];\n"
               << "                    Example: UPDATE users SET name = \"Bob\" WHERE id = 1;\n\n"
-              << "5. DELETE FROM    : DELETE FROM <tableName> [WHERE <colName> <op> <val>];\n"
+              << "6. DELETE FROM    : DELETE FROM <tableName> [WHERE <colName> <op> <val>];\n"
               << "                    Example: DELETE FROM users WHERE id = 1;\n\n"
-              << "6. DROP TABLE     : DROP TABLE <tableName>;\n"
+              << "7. DROP TABLE     : DROP TABLE <tableName>;\n"
               << "                    Example: DROP TABLE users;\n\n"
-              << "7. ROLLBACK       : ROLLBACK <tableName> <version_number>;\n"
+              << "8. ROLLBACK       : ROLLBACK <tableName> <version_number>;\n"
               << "                    Example: ROLLBACK users 1;\n\n"
-              << "8. HISTORY        : HISTORY <tableName> [limit];\n"
+              << "9. HISTORY        : HISTORY <tableName> [limit];\n"
               << "                    Example: HISTORY users 5;\n\n"
-              << "9. HELP           : HELP;\n"
+              << "10. HELP          : HELP;\n"
               << "                    Displays this help information.\n"
               << "=========================================================================\n\n";
 }

@@ -1,0 +1,9 @@
+# Compilation outputs
+*.o
+main.exe
+
+# Build directory
+build/
+
+# Local database files
+database.db

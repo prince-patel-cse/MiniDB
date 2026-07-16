@@ -3,9 +3,10 @@
 
 #include <string>
 
+// List of all recognized token types parsed by the lexer
 enum class TokenType
 {
-    // Keywords
+    // Query command words
     CREATE,
     TABLE,
     INSERT,
@@ -20,35 +21,39 @@ enum class TokenType
     VERSION,
     DROP,
 
+    // Data type keywords
     INT,
     STRING,
     BOOL,
     DOUBLE,
 
-    // Symbols
-    LPAREN,
-    RPAREN,
-    COMMA,
-    SEMICOLON,
-    STAR,
-    EQUAL,
-    LT,
-    GT,
+    // Command punctuation and operator symbols
+    LPAREN,     // '('
+    RPAREN,     // ')'
+    COMMA,      // ','
+    SEMICOLON,  // ';'
+    STAR,       // '*'
+    EQUAL,      // '='
+    LT,         // '<'
+    GT,         // '>'
     ROLLBACK,
+    HISTORY,
+    HELP,
 
-    // Literals
+    // Literal and name representations
     IDENTIFIER,
     NUMBER,
     STRING_LITERAL,
 
-    END_OF_FILE,
-    INVALID
+    END_OF_FILE, // End of the input query
+    INVALID      // Lexer encountered an unrecognized character
 };
 
+// Represents a parsed token
 struct Token
 {
-    TokenType type;
-    std::string val;
+    TokenType type;  // The type of the token
+    std::string val; // The original text value of the token
 
     Token(TokenType t, const std::string &l)
     {

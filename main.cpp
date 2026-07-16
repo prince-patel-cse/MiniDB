@@ -10,7 +10,18 @@ int main()
 {
     DB db;
     // Ask our playroom cabinet to load all tables and rows from the "database.db" file!
-    db.load();
+    try
+    {
+        db.load();
+    }
+    catch (const std::exception &e)
+    {
+        std::cout << "Error loading database: " << e.what() << "\nStarting with an empty database.\n";
+        db.tables.clear();
+        db.ids.clear();
+        db.s.clear();
+        db.count = 0;
+    }
 
     std::string query;
     std::cout << "\nWelcome to MiniDB\nexit : to exit menu , help for help\n\n";

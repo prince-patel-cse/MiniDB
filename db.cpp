@@ -248,6 +248,12 @@ void DB::load(const std::string &filename)
     // Read logical table mappings back!
     for (uint32_t i = 0; i < ids_size; i++)
     {
+        if (ptr + 8 > catBuf + Pager::PAGE_SIZE)
+        {
+            std::cout << "Error: Corrupted database file.\n";
+            tables.clear(); ids.clear(); s.clear(); count = 0;
+            return;
+        }
         int logicalId = readBytes<int32_t>(ptr);
         int index = readBytes<int32_t>(ptr);
         ids[logicalId] = index;
@@ -256,7 +262,19 @@ void DB::load(const std::string &filename)
     // Read all tables schemas, columns, search indexes and rows!
     for (uint32_t i = 0; i < num_tables; i++)
     {
+        if (ptr + 1 > catBuf + Pager::PAGE_SIZE)
+        {
+            std::cout << "Error: Corrupted database file.\n";
+            tables.clear(); ids.clear(); s.clear(); count = 0;
+            return;
+        }
         uint8_t nameLen = *ptr; ptr++;
+        if (ptr + nameLen + 10 > catBuf + Pager::PAGE_SIZE)
+        {
+            std::cout << "Error: Corrupted database file.\n";
+            tables.clear(); ids.clear(); s.clear(); count = 0;
+            return;
+        }
         std::string tableName(ptr, nameLen);
         ptr += nameLen;
 
@@ -267,7 +285,19 @@ void DB::load(const std::string &filename)
         std::vector<Column> cols(colCount);
         for (uint16_t c = 0; c < colCount; c++)
         {
+            if (ptr + 1 > catBuf + Pager::PAGE_SIZE)
+            {
+                std::cout << "Error: Corrupted database file.\n";
+                tables.clear(); ids.clear(); s.clear(); count = 0;
+                return;
+            }
             uint8_t colNameLen = *ptr; ptr++;
+            if (ptr + colNameLen + 1 > catBuf + Pager::PAGE_SIZE)
+            {
+                std::cout << "Error: Corrupted database file.\n";
+                tables.clear(); ids.clear(); s.clear(); count = 0;
+                return;
+            }
             cols[c].name = std::string(ptr, colNameLen);
             ptr += colNameLen;
             uint8_t typeVal = *ptr; ptr++;
@@ -279,10 +309,28 @@ void DB::load(const std::string &filename)
         table.versionHeadPageId = versionHeadPageId;
 
         // Read and load every search index back!
+        if (ptr + 2 > catBuf + Pager::PAGE_SIZE)
+        {
+            std::cout << "Error: Corrupted database file.\n";
+            tables.clear(); ids.clear(); s.clear(); count = 0;
+            return;
+        }
         uint16_t idxCount = readBytes<uint16_t>(ptr);
         for (uint16_t idx = 0; idx < idxCount; idx++)
         {
+            if (ptr + 1 > catBuf + Pager::PAGE_SIZE)
+            {
+                std::cout << "Error: Corrupted database file.\n";
+                tables.clear(); ids.clear(); s.clear(); count = 0;
+                return;
+            }
             uint8_t idxColNameLen = *ptr; ptr++;
+            if (ptr + idxColNameLen + 4 > catBuf + Pager::PAGE_SIZE)
+            {
+                std::cout << "Error: Corrupted database file.\n";
+                tables.clear(); ids.clear(); s.clear(); count = 0;
+                return;
+            }
             std::string colName = std::string(ptr, idxColNameLen);
             ptr += idxColNameLen;
             uint32_t rootPageId = readBytes<uint32_t>(ptr);

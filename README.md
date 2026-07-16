@@ -1,6 +1,6 @@
 # MiniDB
 
-MiniDB is a lightweight database engine written in C++ that stores records using a binary page-based storage layout.
+MiniDB is a lightweight database engine written in C++ that provides time-travel functionality through the HISTORY and ROLLBACK queries.
 
 ---
 
